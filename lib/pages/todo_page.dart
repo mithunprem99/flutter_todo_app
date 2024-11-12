@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:todo_app/data/database.dart';
 import 'package:todo_app/utils/dialougebox.dart';
 import 'package:todo_app/utils/todo_tile.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 class TodoPage extends StatefulWidget {
   const TodoPage({super.key});
@@ -10,18 +12,25 @@ class TodoPage extends StatefulWidget {
 }
 
 class _TodoPageState extends State<TodoPage> {
+  final _mybox = Hive.box('mybox');
+
   final _controller = TextEditingController();
-  List todoList = [
-    [
-      "Make An App",
-      false,
-    ],
-    [
-      "Do pass in gov exam",
-      false,
-    ]
-  ];
+  TodoDatbase db = TodoDatbase();
+
   @override
+  //if this is the first time opening the app then create the default data
+
+  void initState() {
+    if (_mybox.get("TODOLIST") == null) {
+      db.createInitialData();
+    } else {
+      // there already exist data
+
+      db.loadDatafromDatabase();
+    }
+    super.initState();
+  }
+
   Widget build(BuildContext context) {
     return Scaffold(
         backgroundColor: Colors.yellow[100],
@@ -39,11 +48,11 @@ class _TodoPageState extends State<TodoPage> {
           backgroundColor: Colors.amber[400],
         ),
         body: ListView.builder(
-            itemCount: todoList.length,
+            itemCount: db.todoList.length,
             itemBuilder: (context, index) {
               return TodoTile(
-                taskName: todoList[index][0],
-                taskCompleted: todoList[index][1],
+                taskName: db.todoList[index][0],
+                taskCompleted: db.todoList[index][1],
                 onChanged: (value) => checkboxChanged(value, index),
                 deleteFunction: (context) => deleteTask(index),
               );
@@ -52,8 +61,9 @@ class _TodoPageState extends State<TodoPage> {
 
   void checkboxChanged(bool? value, int index) {
     setState(() {
-      todoList[index][1] = !todoList[index][1];
+      db.todoList[index][1] = !db.todoList[index][1];
     });
+    db.updateDatabase();
   }
 
   void createNewTask() {
@@ -70,15 +80,17 @@ class _TodoPageState extends State<TodoPage> {
 
   void saveNewTask() {
     setState(() {
-      todoList.add([_controller.text, false]);
+      db.todoList.add([_controller.text, false]);
       _controller.clear();
     });
     Navigator.of(context).pop();
+    db.updateDatabase();
   }
 
   void deleteTask(int index) {
     setState(() {
-      todoList.removeAt(index);
+      db.todoList.removeAt(index);
     });
+    db.updateDatabase();
   }
 }
